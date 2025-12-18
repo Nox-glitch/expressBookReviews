@@ -1,31 +1,35 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
-const session = require('express-session')
+const session = require('express-session');
+
 const customer_routes = require('./router/auth_users.js').authenticated;
 const genl_routes = require('./router/general.js').general;
 
 const app = express();
+const PORT = 5000;
 
+// BODY PARSING
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-app.use("/customer",session({secret:"fingerprint_customer",resave: true, saveUninitialized: true}))
+// SESSION (ONLY ONCE, BEFORE AUTH)
+app.use(session({
+  secret: "fingerprint_customer",
+  resave: false,
+  saveUninitialized: true
+}));
 
+// AUTH MIDDLEWARE (CORRECT CHECK)
 app.use("/customer/auth/*", function auth(req, res, next) {
-    if (req.session && req.session.accessToken) {
-      // user is authenticated
-      next();
-    } else {
-      // user is NOT authenticated
-      res.status(401).json({
-        message: "Unauthorized access"
-      });
-    }
-  });
-  
- 
-const PORT =5000;
+  if (req.session.authorization && req.session.authorization.accessToken) {
+    next();
+  } else {
+    return res.status(401).json({ message: "Unauthorized access" });
+  }
+});
 
+// ROUTES
 app.use("/customer", customer_routes);
 app.use("/", genl_routes);
 
-app.listen(PORT,()=>console.log("Server is running"));
+app.listen(PORT, () => console.log("Server is running"));
